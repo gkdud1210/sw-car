@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { Send, MapPin, Phone, Mail } from "lucide-react";
 
+const FORMSPREE_ID = "xlgkwpdb";
+
 interface FormData {
   name: string;
   email: string;
@@ -28,6 +30,8 @@ export default function ContactSection() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -35,11 +39,27 @@ export default function ContactSection() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setFormData({ name: "", email: "", phone: "", message: "" });
-    setTimeout(() => setSubmitted(false), 5000);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+        setFormData({ name: "", email: "", phone: "", message: "" });
+      } else {
+        setError("전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
+    } catch {
+      setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputBase =
@@ -171,13 +191,20 @@ export default function ContactSection() {
 
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="w-full border border-white text-white text-[11px] tracking-[0.28em] uppercase py-4 hover:bg-white hover:text-black transition-all duration-350 flex items-center justify-center gap-3"
+                  disabled={loading}
+                  whileHover={{ scale: loading ? 1 : 1.01 }}
+                  whileTap={{ scale: loading ? 1 : 0.99 }}
+                  className="w-full border border-white text-white text-[11px] tracking-[0.28em] uppercase py-4 hover:bg-white hover:text-black transition-all duration-350 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={13} />
-                  Send Inquiry
+                  {loading ? "Sending..." : "Send Inquiry"}
                 </motion.button>
+
+                {error && (
+                  <p className="text-red-400/80 text-[11px] text-center tracking-wider">
+                    {error}
+                  </p>
+                )}
 
                 <p className="text-white/20 text-[10px] text-center tracking-wider">
                   빠른 시일 내에 답변 드리겠습니다
